@@ -7,11 +7,14 @@ public class TableMetadata {
     private String name;
     private List<String> columnNames;
     private List<String> columnDefinitions;
+    private List<String> placeholders;
 
-    public TableMetadata(String name, List<String> columnNames, List<String> columnDefinitions) {
+    public TableMetadata(String name, List<String> columnNames, List<String> columnDefinitions,
+                         List<String> placeholders) {
         this.name = name;
         this.columnNames = columnNames;
         this.columnDefinitions = columnDefinitions;
+        this.placeholders = placeholders;
     }
 
     public String getName() {
@@ -35,13 +38,6 @@ public class TableMetadata {
     }
 
     public String getParameterPlaceholders(){
-        StringBuilder placeholders = new StringBuilder();
-        for(int idx = 0, size = columnNames.size(); idx < size; idx++){
-            placeholders.append('?');
-            if(idx!=size-1){
-                placeholders.append(',');
-            }
-        }
-        return placeholders.toString();
+       return String.join(", ", placeholders);
     }
 }

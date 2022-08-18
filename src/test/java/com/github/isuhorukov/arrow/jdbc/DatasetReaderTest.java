@@ -29,7 +29,7 @@ public class DatasetReaderTest {
         File tempFile = File.createTempFile("test_dump", "csv");
         try (Connection connection = DriverManager.getConnection(jdbcUrl, user, password)){
             DatasetReader.copyArrowDatasetIntoTable(datasetUri, fileFormatString, batchSize,
-                    databaseDialect, driverClass, tableName, jdbcUrl, user, password, createTable);
+                    databaseDialect, driverClass, tableName, jdbcUrl, user, password, createTable, null);
             try (Statement statement = connection.createStatement()){
                 statement.executeUpdate("call CSVWRITE ( '"+tempFile.getAbsolutePath()+"', 'SELECT * FROM data order by 1 limit 10' )");
             }

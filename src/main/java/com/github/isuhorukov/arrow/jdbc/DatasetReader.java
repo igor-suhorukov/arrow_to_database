@@ -1,5 +1,6 @@
 package com.github.isuhorukov.arrow.jdbc;
 
+import com.github.isuhorukov.arrow.jdbc.bridge.ArrowToDbCli;
 import com.github.isuhorukov.arrow.jdbc.bridge.DatabaseDialect;
 import com.github.isuhorukov.arrow.jdbc.bridge.mapper.Mapper;
 import com.github.isuhorukov.arrow.jdbc.bridge.model.TableMetadata;
@@ -21,6 +22,8 @@ import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.complex.ListVector;
 import org.apache.arrow.vector.ipc.ArrowReader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.sql.*;
@@ -30,6 +33,7 @@ import java.util.List;
 import java.util.stream.StreamSupport;
 
 public class DatasetReader {
+    private final static Logger LOGGER = LoggerFactory.getLogger(DatasetReader.class);
 
     public static final String CREATE_TABLE = "create table ";
     public static final String CREATE_TEMP_TABLE = "create temporary table ";
@@ -37,7 +41,8 @@ public class DatasetReader {
 
     public static void copyArrowDatasetIntoTable(String datasetUri, String fileFormatString, int batchSize,
                                   String databaseDialectString, String driverClass, String tableName,
-                                  String jdbcUrl, String user, String password, String createTable) throws Exception {
+                                  String jdbcUrl, String user, String password,
+                                  String createTable, String insertSqlQuery) throws Exception {
         FileFormat fileFormat = FileFormat.valueOf(fileFormatString);
         DatabaseDialect databaseDialect = DatabaseDialect.valueOf(databaseDialectString);
         TableMetadata tableMetadata = readArrowMetadataAndMapToDbTypes(datasetUri,
@@ -50,16 +55,28 @@ public class DatasetReader {
         try (Connection connection = DriverManager.getConnection(jdbcUrl, user, password)){
             if(createTable !=null && !createTable.isEmpty()){
                 try (Statement statement = connection.createStatement()){
-                    String tableDDL = TEMPORARY.equalsIgnoreCase(createTable)? CREATE_TEMP_TABLE : CREATE_TABLE;
-                    statement.executeUpdate(tableDDL +tableMetadata.getName()+"("+tableMetadata.getDefinitions()+")");
+                    String tableDDL = (TEMPORARY.equalsIgnoreCase(createTable)? CREATE_TEMP_TABLE : CREATE_TABLE)
+                            + tableMetadata.getName()+"("+tableMetadata.getDefinitions()+")";
+                    LOGGER.info("Create table to import data. DDL {}", tableDDL);
+                    statement.executeUpdate(tableDDL);
                 }
             }
-            try (PreparedStatement preparedStatement = connection.prepareStatement(
-                    "insert into " + tableMetadata.getName()+"("+tableMetadata.getColumns()+
-                            ") values("+tableMetadata.getParameterPlaceholders()+")")){
+            try (PreparedStatement preparedStatement = connection.prepareStatement(getInsertQuery(insertSqlQuery, tableMetadata))){
                 copyArrowDatasetIntoPreparedStatement(batchSize, fileFormat, datasetUri, preparedStatement);
             }
         }
+    }
+
+    private static String getInsertQuery(String insertSqlQuery, TableMetadata tableMetadata) {
+        String insertQuery;
+        if (insertSqlQuery == null) {
+            insertQuery = "insert into " + tableMetadata.getName() + "(" + tableMetadata.getColumns() +
+                    ") values(" + tableMetadata.getParameterPlaceholders() + ")";
+            LOGGER.info("Generated 'insert' query from Apache Arrow schema: {}", insertQuery);
+        } else {
+            insertQuery = insertSqlQuery;
+        }
+        return insertQuery;
     }
 
     private static void copyArrowDatasetIntoPreparedStatement(int batchSize, FileFormat fileFormat,
@@ -121,6 +138,7 @@ public class DatasetReader {
                                                   String tableName) {
         List<String> columnNames = new ArrayList<>();
         List<String> columnDefinition = new ArrayList<>();
+        List<String> placeholders = new ArrayList<>();
         Mapper databaseDialectMapper = databaseDialect.getMapper();
         for(int columnIdx = 0; columnIdx < root.getFieldVectors().size(); ++columnIdx) {
             FieldVector vector = root.getVector(columnIdx);
@@ -134,17 +152,24 @@ public class DatasetReader {
                                             new ColumnBinderArrowTypeVisitor(listVector, null));
                 columnDefinition.add(databaseDialectMapper.columnDefinition(
                                             name, databaseDialectMapper.arrayColumnType(scalarType.getJdbcType())));
+                placeholders.add("?");
             } else {
                 String columnType;
                 if(binder instanceof MapBinder){
                     columnType = databaseDialectMapper.jsonType();
+                    if(!columnType.equals(databaseDialectMapper.columnType(binder.getJdbcType()))){
+                        placeholders.add("CAST(? AS "+columnType+")");
+                    } else {
+                        placeholders.add("?");
+                    }
                 } else {
                     columnType = databaseDialectMapper.columnType(binder.getJdbcType());
+                    placeholders.add("?");
                 }
                 columnDefinition.add(databaseDialectMapper.columnDefinition(name, columnType));
             }
         }
-        return new TableMetadata(tableName, columnNames, columnDefinition);
+        return new TableMetadata(tableName, columnNames, columnDefinition, placeholders);
     }
 
     public static String[] readArrowMetadata(String datasetUri, FileFormat fileFormat, int batchSize,
