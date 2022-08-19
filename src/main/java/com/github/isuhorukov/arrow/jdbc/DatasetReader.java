@@ -53,6 +53,7 @@ public class DatasetReader {
         }
 
         try (Connection connection = DriverManager.getConnection(jdbcUrl, user, password)){
+            connection.setAutoCommit(false);
             if(createTable !=null && !createTable.isEmpty()){
                 try (Statement statement = connection.createStatement()){
                     String tableDDL = (TEMPORARY.equalsIgnoreCase(createTable)? CREATE_TEMP_TABLE : CREATE_TABLE)
@@ -63,7 +64,11 @@ public class DatasetReader {
             }
             try (PreparedStatement preparedStatement = connection.prepareStatement(getInsertQuery(insertSqlQuery, tableMetadata))){
                 copyArrowDatasetIntoPreparedStatement(batchSize, fileFormat, datasetUri, preparedStatement);
+            } catch (Exception e){
+                connection.rollback();
+                throw e;
             }
+            connection.commit();
         }
     }
 
