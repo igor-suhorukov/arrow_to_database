@@ -28,6 +28,10 @@ public class PostgresqlMapper implements Mapper{
                 "Postgresql mapping is not found for provided java.sql.Types "+jdbcType);
     }
 
+    public String columnTypeOrNull(int jdbcType){
+        return TYPE_MAPPING.get(jdbcType);
+    }
+
     public String arrayColumnType(int jdbcType){
         return String.format("%s[]", columnType(jdbcType));
     }
@@ -41,7 +45,7 @@ public class PostgresqlMapper implements Mapper{
     }
 
     @Override
-    public String jsonType() {
+    public String mapType() {
         return "json";
     }
 }

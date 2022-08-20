@@ -25,10 +25,17 @@ public class MapBinder extends BaseColumnBinder<MapVector> {
     @Override
     public void bind(PreparedStatement statement, int parameterIndex, int rowIndex) throws SQLException {
         reader.setPosition(rowIndex);
-        LinkedHashMap<String, String> tags = new JsonStringHashMap<>();
+        LinkedHashMap<Object, Object> tags = new JsonStringHashMap<>();
         while (reader.next()){
-            tags.put(reader.key().readObject().toString(), reader.value().readObject().toString());
+            tags.put(reader.key().readObject(), reader.value().readObject());
         }
-        statement.setString(parameterIndex, tags.toString());
+        switch (jdbcType){
+            case Types.VARCHAR:
+                statement.setString(parameterIndex, tags.toString());
+                break;
+            case Types.OTHER:
+            default:
+                statement.setObject(parameterIndex, tags);
+        }
     }
 }

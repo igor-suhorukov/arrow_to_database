@@ -24,6 +24,11 @@ public class QuestDbMapper implements Mapper{
                 "Postgresql mapping is not found for provided java.sql.Types "+jdbcType);
     }
 
+    @Override
+    public String columnTypeOrNull(int jdbcType) {
+        return TYPE_MAPPING.get(jdbcType);
+    }
+
     public String arrayColumnType(int jdbcType){
         throw new UnsupportedOperationException("Arrays is unsupportable features in QuestDB");
     }
@@ -37,7 +42,7 @@ public class QuestDbMapper implements Mapper{
     }
 
     @Override
-    public String jsonType() {
+    public String mapType() {
         return "string";
     }
 }

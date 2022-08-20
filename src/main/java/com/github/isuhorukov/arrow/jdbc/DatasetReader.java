@@ -161,8 +161,8 @@ public class DatasetReader {
             } else {
                 String columnType;
                 if(binder instanceof MapBinder){
-                    columnType = databaseDialectMapper.jsonType();
-                    if(!columnType.equals(databaseDialectMapper.columnType(binder.getJdbcType()))){
+                    columnType = databaseDialectMapper.mapType();
+                    if(!columnType.equals(databaseDialectMapper.columnTypeOrNull(binder.getJdbcType()))){
                         placeholders.add("CAST(? AS "+columnType+")");
                     } else {
                         placeholders.add("?");

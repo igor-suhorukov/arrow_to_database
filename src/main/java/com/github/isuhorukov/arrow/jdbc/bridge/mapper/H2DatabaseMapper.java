@@ -28,6 +28,11 @@ public class H2DatabaseMapper implements Mapper{
                 "Postgresql mapping is not found for provided java.sql.Types "+jdbcType);
     }
 
+    @Override
+    public String columnTypeOrNull(int jdbcType) {
+        return TYPE_MAPPING.get(jdbcType);
+    }
+
     public String arrayColumnType(int jdbcType){
         return String.format("%s array", columnType(jdbcType));
     }
@@ -41,7 +46,7 @@ public class H2DatabaseMapper implements Mapper{
     }
 
     @Override
-    public String jsonType() {
+    public String mapType() {
         return "VARCHAR";
     }
 }
