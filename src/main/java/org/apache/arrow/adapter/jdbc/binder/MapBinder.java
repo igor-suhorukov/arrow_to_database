@@ -27,7 +27,7 @@ public class MapBinder extends BaseColumnBinder<MapVector> {
         reader.setPosition(rowIndex);
         LinkedHashMap<String, String> tags = new JsonStringHashMap<>();
         while (reader.next()){
-            tags.put(reader.key().readText().toString(), reader.value().readText().toString());
+            tags.put(reader.key().readObject().toString(), reader.value().readObject().toString());
         }
         statement.setString(parameterIndex, tags.toString());
     }
