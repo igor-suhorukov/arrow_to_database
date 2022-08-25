@@ -10,6 +10,7 @@ public class QuestDbMapper implements Mapper{
             Map.entry(java.sql.Types.SMALLINT, "short"),
             Map.entry(java.sql.Types.INTEGER, "int"),
             Map.entry(java.sql.Types.REAL, "float"),
+            Map.entry(java.sql.Types.DOUBLE, "double"),
             Map.entry(java.sql.Types.BIGINT, "long"),
             Map.entry(java.sql.Types.BINARY, "binary"),
             Map.entry(java.sql.Types.VARBINARY, "binary"),
