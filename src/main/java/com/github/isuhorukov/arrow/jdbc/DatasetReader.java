@@ -30,6 +30,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.StreamSupport;
 
 public class DatasetReader {
@@ -93,7 +94,9 @@ public class DatasetReader {
             ScanOptions options = new ScanOptions(batchSize);
             final Scanner scanner = dataset.newScan(options);
             try {
+                AtomicLong totalRows = new AtomicLong();
                 StreamSupport.stream(scanner.scan().spliterator(), false).forEach(scanTask -> {
+                    long rowCount=0;
                     try (ArrowReader reader = scanTask.execute()) {
                         while (reader.loadNextBatch()) {
                             VectorSchemaRoot root = reader.getVectorSchemaRoot();
@@ -101,13 +104,16 @@ public class DatasetReader {
                                                             .builder(preparedStatement, root).bindAll().build();
                             while (binder.next()) {
                                 preparedStatement.addBatch();
+                                rowCount++;
                             }
                             preparedStatement.executeBatch();
                         }
+                        totalRows.addAndGet(rowCount);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
                 });
+                LOGGER.info("Total rows imported: {}", totalRows.get());
 
             } finally {
                 AutoCloseables.close(scanner, dataset);
