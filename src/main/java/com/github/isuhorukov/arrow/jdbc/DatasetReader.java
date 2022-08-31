@@ -1,6 +1,5 @@
 package com.github.isuhorukov.arrow.jdbc;
 
-import com.github.isuhorukov.arrow.jdbc.bridge.ArrowToDbCli;
 import com.github.isuhorukov.arrow.jdbc.bridge.DatabaseDialect;
 import com.github.isuhorukov.arrow.jdbc.bridge.mapper.Mapper;
 import com.github.isuhorukov.arrow.jdbc.bridge.model.TableMetadata;
@@ -12,7 +11,6 @@ import org.apache.arrow.dataset.file.FileFormat;
 import org.apache.arrow.dataset.file.FileSystemDatasetFactory;
 import org.apache.arrow.dataset.jni.NativeMemoryPool;
 import org.apache.arrow.dataset.scanner.ScanOptions;
-import org.apache.arrow.dataset.scanner.ScanTask;
 import org.apache.arrow.dataset.scanner.Scanner;
 import org.apache.arrow.dataset.source.Dataset;
 import org.apache.arrow.memory.BufferAllocator;
@@ -22,13 +20,12 @@ import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.complex.ListVector;
 import org.apache.arrow.vector.ipc.ArrowReader;
+import org.apache.arrow.vector.types.pojo.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.StreamSupport;
@@ -129,20 +126,18 @@ public class DatasetReader {
             final Dataset dataset = factory.finish();
             ScanOptions options = new ScanOptions(batchSize);
             final Scanner scanner = dataset.newScan(options);
-            Iterator<? extends ScanTask> iterator = scanner.scan().iterator();
-            if(iterator.hasNext()){
-                ScanTask scanTask = iterator.next();
-                try (ArrowReader reader = scanTask.execute()) {
-                    if (reader.loadNextBatch()) {
-                        VectorSchemaRoot root = reader.getVectorSchemaRoot();
-                        return getTableMetadata(root, databaseDialect, tableName);
-                    }
-                }
-            }
-        } catch (IOException e){
-            throw new RuntimeException(e);
+            Schema schema = scanner.schema();
+            return getTableMetadataFromSchema(schema, databaseDialect, tableName);
         }
-        throw new IllegalArgumentException("Empty dataset " + datasetUri);
+    }
+
+    public static TableMetadata getTableMetadataFromSchema(Schema schema, DatabaseDialect databaseDialect,
+                                                           String tableName) {
+        try (BufferAllocator allocator = new RootAllocator()) {
+            try (VectorSchemaRoot vectorSchemaRoot = VectorSchemaRoot.create(schema, allocator)) {
+                return getTableMetadata(vectorSchemaRoot, databaseDialect, tableName);
+            }
+        }
     }
 
     private static TableMetadata getTableMetadata(VectorSchemaRoot root, DatabaseDialect databaseDialect,
