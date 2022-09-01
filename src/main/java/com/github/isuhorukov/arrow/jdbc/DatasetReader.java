@@ -20,12 +20,15 @@ import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.complex.ListVector;
 import org.apache.arrow.vector.ipc.ArrowReader;
+import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.StreamSupport;
@@ -36,6 +39,7 @@ public class DatasetReader {
     public static final String CREATE_TABLE = "create table ";
     public static final String CREATE_TEMP_TABLE = "create temporary table ";
     public static final String TEMPORARY = "temporary";
+    public static final String COMMENT = "comment";
 
     public static void copyArrowDatasetIntoTable(String datasetUri, String fileFormatString, int batchSize,
                                   String databaseDialectString, String driverClass, String tableName,
@@ -146,12 +150,19 @@ public class DatasetReader {
         List<String> columnDefinition = new ArrayList<>();
         List<String> placeholders = new ArrayList<>();
         Mapper databaseDialectMapper = databaseDialect.getMapper();
+        LinkedHashMap<String, String> columnComments = new LinkedHashMap<>();
         for(int columnIdx = 0; columnIdx < root.getFieldVectors().size(); ++columnIdx) {
             FieldVector vector = root.getVector(columnIdx);
-            ColumnBinder binder = vector.getField().getType().accept(
+            Field field = vector.getField();
+            ColumnBinder binder = field.getType().accept(
                                     new ColumnBinderArrowTypeVisitor(vector, null));
             String name = vector.getName();
-            columnNames.add(databaseDialectMapper.columnName(name));
+            String columnName = databaseDialectMapper.columnName(name);
+            columnNames.add(columnName);
+            String comment = field.getMetadata().get(COMMENT);
+            if(comment!=null && !comment.isEmpty()){
+                columnComments.put(columnName, comment);
+            }
             if (binder.getJdbcType()== Types.ARRAY){
                 FieldVector listVector = ((ListVector) vector).getDataVector();
                 ColumnBinder scalarType = listVector.getField().getType().accept(
@@ -175,7 +186,7 @@ public class DatasetReader {
                 columnDefinition.add(databaseDialectMapper.columnDefinition(name, columnType));
             }
         }
-        return new TableMetadata(tableName, columnNames, columnDefinition, placeholders);
+        return new TableMetadata(tableName, columnNames, columnDefinition, placeholders, root.getSchema().getCustomMetadata().get("comment"), !columnComments.isEmpty() ? columnComments : null);
     }
 
     public static String[] readArrowMetadata(String datasetUri, FileFormat fileFormat, int batchSize,
