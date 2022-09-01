@@ -186,7 +186,8 @@ public class DatasetReader {
                 columnDefinition.add(databaseDialectMapper.columnDefinition(name, columnType));
             }
         }
-        return new TableMetadata(tableName, columnNames, columnDefinition, placeholders, root.getSchema().getCustomMetadata().get("comment"), !columnComments.isEmpty() ? columnComments : null);
+        return new TableMetadata(tableName, columnNames, columnDefinition, placeholders,
+                root.getSchema().getCustomMetadata().get(COMMENT), !columnComments.isEmpty() ? columnComments : null);
     }
 
     public static String[] readArrowMetadata(String datasetUri, FileFormat fileFormat, int batchSize,
