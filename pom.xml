@@ -11,10 +11,7 @@
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
-        <arrow.version>9.0.0.dev584</arrow.version>
-        <!-- waiting for Arrow 10.0.0 RELEASE
-        <arrow.version>10.0.0</arrow.version>
-        -->
+        <arrow.version>11.0.0</arrow.version>
     </properties>
 
     <dependencies>
