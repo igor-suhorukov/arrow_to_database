@@ -8,7 +8,7 @@ public class CliParameters {
     @Parameter(names = { "-dataset" }, required = true, description = "file:// prefexed URI of Arrow dataset  " +
             "https://arrow.apache.org/docs/python/dataset.html")
     String datasetUri;
-    @Parameter(names = { "-dataset_format" }, description = "Dataset binary file format: PARQUET or ARROW_IPC")
+    @Parameter(names = { "-dataset_format" }, description = "Dataset binary file format: PARQUET, ARROW_IPC, ORC, CSV")
     String fileFormatString = FileFormat.PARQUET.name();
     @Parameter(names = { "-batch_size" }, description = "Batch size to fetch and sent into DB " +
             "https://arrow.apache.org/docs/python/dataset.html#customizing-the-batch-size")
