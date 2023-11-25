@@ -105,11 +105,4 @@
                     </plugin>
         </plugins>
     </build>
-    <repositories>
-        <repository>
-            <!-- waiting for Arrow 10.0.0 RELEASE -->
-            <id>arrow-apache-nightlies</id>
-            <url>https://nightlies.apache.org/arrow/java</url>
-        </repository>
-    </repositories>
 </project>
