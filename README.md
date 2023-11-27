@@ -18,7 +18,7 @@ Options:
         file:// prefexed URI of Arrow dataset  
          https://arrow.apache.org/docs/python/dataset.html
      -dataset_format
-        Dataset binary file format: PARQUET, ARROW_IPC, ORC, CSV
+        Dataset binary file format: PARQUET, ARROW_IPC, ORC, CSV, JSON
         Default: PARQUET
      -batch_size
         Batch size to fetch and sent into DB 
